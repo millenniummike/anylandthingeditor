@@ -2,10 +2,43 @@ using UnityEngine;
 using UnityEditor;
 using System;
 using System.Collections.Generic;
+public enum OPTIONS
+{
+    DEFAULT = 0,
+    SPIRAL = 1,
+    RING = 2,
+    HORN = 3,
+    GRID = 4,
+    GRID_SPACED = 5,
+    TOWER = 6,
+    STAIRS = 7,
+    TABLE = 1000
+}
+
+public enum PARTS
+{
+    CUBE = 1,
+    PYRAMID = 2,
+    SPHERE = 3,
+    CONE = 4,
+    CYLINDER = 5,
+    TRIANGLE = 6,
+    TRAPEZE = 7,
+    HEDRA = 8,
+    ICOSPHERE = 9,
+    LOWPOLYSPHERE = 10,
+    RAMP = 11,
+    JITTERCUBE = 12,
+    CHAMFERCUBE = 13,
+    SPIKE = 14,
+}
 
 [CustomEditor(typeof(Part)), CanEditMultipleObjects]
 public class GUIEditor : Editor
 {
+    static OPTIONS op;
+
+    static PARTS partSelected = PARTS.CUBE;
     static int b = 1;
     static Vector3 max = new Vector3(5f,5f,5f);
     static Vector3 spacing = new Vector3(1f,1f,1f);
@@ -13,7 +46,7 @@ public class GUIEditor : Editor
     static float circleSize = 20;
     static float theta_scale = 0.02f;
     static Vector3 rotationOffset = new Vector3(0,0,0);
-    static Vector3 scaleOffset = new Vector3(0,0,0);
+    static Vector3 scaleOffset = new Vector3(1,1,1);
     static Vector3 positionOffset = new Vector3(0f,0f,0f);
 
     static Vector3 jitter = new Vector3(0f,0f,0f);
@@ -24,28 +57,129 @@ public class GUIEditor : Editor
     static List<GameObject> newGameObjects;
 
     static GameObject lastSelected;
+
+    static Setting settings;
     public override void OnInspectorGUI()
     {
-        b = EditorGUILayout.IntField("B - part number:", b);
+        
+        partSelected = (PARTS)EditorGUILayout.EnumPopup("Part:", partSelected);
         iterations = EditorGUILayout.IntField("Iterations:", iterations);
-        speed = EditorGUILayout.FloatField("Speed:", speed);
+        speed = EditorGUILayout.FloatField("Forward Speed:", speed);
         rotationOffset = EditorGUILayout.Vector3Field("Rotation offset:", rotationOffset);
+        positionOffset = EditorGUILayout.Vector3Field("Position offset:", positionOffset);
         scaleOffset = EditorGUILayout.Vector3Field("Scale offset:", scaleOffset);
         jitter = EditorGUILayout.Vector3Field("Jitter:", jitter);
         max = EditorGUILayout.Vector3Field("Max grid size:", max); 
-        spacing = EditorGUILayout.Vector3Field("Grid spacing:", spacing);  
-        radius = EditorGUILayout.FloatField("Radius:", radius);
-        circleSize = EditorGUILayout.FloatField("Points of circle:", circleSize);
-        theta_scale = EditorGUILayout.FloatField("Theta scale:", theta_scale);
+        spacing = EditorGUILayout.Vector3Field("Grid spacing:", spacing);
+        var rect = EditorGUILayout.BeginHorizontal();
+        Handles.color = Color.gray;
+        Handles.DrawLine(new Vector2(rect.x - 15, rect.y), new Vector2(rect.width + 15, rect.y));
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.Space();
+
+        GUILayout.BeginHorizontal();
+        EditorGUIUtility.labelWidth = 90f;
+        radius = EditorGUILayout.FloatField("Radius:", radius, GUILayout.MaxWidth(200.0f));
+        circleSize = EditorGUILayout.FloatField("Points of circle:", circleSize, GUILayout.MaxWidth(200.0f));
+        theta_scale = EditorGUILayout.FloatField("Theta scale:", theta_scale, GUILayout.MaxWidth(200.0f));
+        GUILayout.EndHorizontal();
+
+        var rect2 = EditorGUILayout.BeginHorizontal();
+        Handles.color = Color.gray;
+        Handles.DrawLine(new Vector2(rect2.x - 15, rect2.y), new Vector2(rect2.width + 15, rect2.y));
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.Space();
         
         GUILayout.BeginHorizontal();
+        
+        op = (OPTIONS)EditorGUILayout.EnumPopup("Setting:", op);
+
+        if(GUILayout.Button("Load Setting", GUILayout.Width(100), GUILayout.Height(20))){
+            // set defaults
+                iterations=5;
+                rotationOffset = new Vector3(0,0,0);
+                positionOffset = new Vector3(0,0,0);
+                scaleOffset = new Vector3(1,1,1);
+                jitter = new Vector3(0,0,0);
+                speed = 1;
+            switch (op)
+         {
+                //** todo load from file */
+                case OPTIONS.SPIRAL:
+                    iterations=20;
+                    rotationOffset.y=30;
+                    positionOffset.y=1;
+                break;
+
+                case OPTIONS.RING:
+                    iterations=17;
+                    rotationOffset.x=20;
+                break;
+
+                case OPTIONS.HORN:
+                    iterations=18;
+                    speed=0.8f;
+                    rotationOffset.x=-20;
+                    scaleOffset=new Vector3(0.9f,0.9f,0.9f);
+                break;
+                case OPTIONS.GRID:
+                    max = new Vector3(10,1,10);
+                    spacing = new Vector3(1,1,1);
+                break;
+
+                case OPTIONS.GRID_SPACED:
+                    max = new Vector3(10,1,10);
+                    spacing = new Vector3(1.1f,1.1f,1.1f);
+                break;
+
+                case OPTIONS.TOWER:
+                    iterations = 10;
+                    speed = 0.8f;
+                    scaleOffset=new Vector3(0.8f,0.8f,0.8f);
+                break;
+
+                case OPTIONS.STAIRS:
+                    iterations = 10;
+                    positionOffset=new Vector3(0f,1f,0f);
+                break;
+
+                case OPTIONS.TABLE:
+                    Vector3 pos;
+                    newGameObjects = new List<GameObject>();
+                    partSelected=PARTS.CUBE;
+                    createPart();
+                    pos = Selection.activeGameObject.transform.position;
+                    Selection.activeGameObject.transform.position=pos;
+                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
+                    createPart();
+                    pos = Selection.activeGameObject.transform.position;
+                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
+                    pos.x+=1;
+                    pos.y+=1;
+                    Selection.activeGameObject.transform.position=pos;
+                    createPart();
+                    pos = Selection.activeGameObject.transform.position;
+                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
+                    pos.x+=1;
+                    Selection.activeGameObject.transform.position=pos;
+                    createPart();
+                    pos = Selection.activeGameObject.transform.position;
+                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
+                    pos.y+=1;
+                    Selection.activeGameObject.transform.position=pos;
+                    createPart();
+                    pos = Selection.activeGameObject.transform.position;
+                    Selection.activeGameObject.transform.localScale=new Vector3(2f,2f,0.1f);
+                    pos.y+=0.5f;
+                    pos.x+=0.5f;
+                    pos.z+=0.5f;
+                    Selection.activeGameObject.transform.position=pos;
+                break;
+            }
+        }
+
         if(GUILayout.Button("Create Part", GUILayout.Width(100), GUILayout.Height(20))){
-            State newState = new State(1);
-            int part = b;
-            newGameObjects = new List<GameObject>();
-            lastSelected = Selection.activeGameObject;
-            GameObject go = CreateObject(newState,b);
-            newGameObjects.Add(go);
+            createPart();
         }
 
         if(GUILayout.Button("Duplicate Part", GUILayout.Width(100), GUILayout.Height(20))){
@@ -58,6 +192,8 @@ public class GUIEditor : Editor
 
          GUILayout.BeginHorizontal();
         if(GUILayout.Button("Create Grid", GUILayout.Width(100), GUILayout.Height(20))){
+            newGameObjects = new List<GameObject>();
+            lastSelected = Selection.activeGameObject;
             GameObject originalGo = Selection.activeGameObject;
             for (float x = 0; x < max.x; x = x + 1){
                 for (float y = 0; y < max.y; y = y + 1){
@@ -73,9 +209,10 @@ public class GUIEditor : Editor
                         newPos.z += positionOffset.z;
 
                         Vector3 newScale = Selection.activeGameObject.transform.localScale;
-                        newScale.x += scaleOffset.x;
-                        newScale.y += scaleOffset.y;
-                        newScale.z += scaleOffset.z;
+                        newScale.x *= scaleOffset.x;
+                        newScale.y *= scaleOffset.y;
+                        newScale.z *= scaleOffset.z;
+                        go.transform.Rotate(rotationOffset.x, rotationOffset.y, rotationOffset.z, Space.Self);
                         go.transform.position = newPos;
                         go.transform.localScale = newScale;
                         Selection.activeGameObject = go;
@@ -106,6 +243,7 @@ public class GUIEditor : Editor
                 newScale.x += scaleOffset.x;
                 newScale.y += scaleOffset.y;
                 newScale.z += scaleOffset.z;
+                
                 go.transform.position = newPos;
                 go.transform.localScale = newScale;
                 newGameObjects.Add(go);
@@ -120,21 +258,27 @@ public class GUIEditor : Editor
         for (int i = 0; i < iterations; i++)
             {
                 GameObject go = CopyObject(Selection.activeGameObject);
+                newGameObjects.Add(go);
                 Vector3 newPosition = go.transform.TransformDirection(Vector3.forward * speed * go.transform.localScale.x);
+                newPosition += positionOffset;
+                Vector3 variation = new Vector3(UnityEngine.Random.Range(0,jitter.x),UnityEngine.Random.Range(0,jitter.y),UnityEngine.Random.Range(0,jitter.z));
+                newPosition += variation;
                 Vector3 newScale = Selection.activeGameObject.transform.localScale;
-                newScale.x += scaleOffset.x;
-                newScale.y += scaleOffset.y;
-                newScale.z += scaleOffset.z;
+                newScale.x *= scaleOffset.x;
+                newScale.y *= scaleOffset.y;
+                newScale.z *= scaleOffset.z;
 
-                if (newScale.x<0) { newScale.x = 0; }
+                if (newScale.x < 0) { newScale.x = 0; }
                 if (newScale.y < 0) { newScale.y = 0; }
                 if (newScale.z < 0) { newScale.z = 0; }
+
+                if (newScale.x==0 && newScale.y==0 && newScale.z==0)
+                {break;}
                 go.transform.localPosition += newPosition;
                 go.transform.localScale = newScale;
                 go.transform.Rotate(rotationOffset.x, rotationOffset.y, rotationOffset.z, Space.Self);
                 saveState(go);
                 Selection.activeGameObject = go;
-                newGameObjects.Add(go);
             }
         }
 
@@ -173,7 +317,9 @@ public class GUIEditor : Editor
                 DestroyImmediate(go);
             }
         }
-        DrawDefaultInspector ();
+        try {DrawDefaultInspector ();} catch (Exception e) {
+
+        }
     }
 
     void updateCurrentObject(){
@@ -254,4 +400,14 @@ public class GUIEditor : Editor
 		int b = int.Parse(Selection.activeGameObject.name);
 		return b;
 	}
+
+    static void createPart(){
+        b = (int) partSelected;
+        State newState = new State(1);
+        lastSelected = Selection.activeGameObject;
+        GameObject go = CreateObject(newState,b);
+        newGameObjects.Add(go);
+        Selection.activeGameObject = go;
+    }
 }
+
