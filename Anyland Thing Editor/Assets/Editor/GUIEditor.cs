@@ -7,12 +7,14 @@ public enum OPTIONS
     DEFAULT = 0,
     SPIRAL = 1,
     RING = 2,
-    HORN = 3,
-    GRID = 4,
-    GRID_SPACED = 5,
-    TOWER = 6,
-    STAIRS = 7,
-    TABLE = 1000
+    ARCH = 3,
+    HORN = 4,
+    GRID_FLAT = 5,
+    GRID_FLAT_SPACED = 6,
+    TOWER = 7,
+    STAIRS = 8,
+    BRICKS = 9,
+    TABLE_GENERATE = 1000
 }
 
 public enum PARTS
@@ -31,7 +33,30 @@ public enum PARTS
     JITTERCUBE = 12,
     CHAMFERCUBE = 13,
     SPIKE = 14,
+    LOWPOLYCYLINDER = 15,
+    
+    HALFSPHERE = 16,
+    
+    JITTERSPHERE = 17,
+    
+    BIGDIALOG = 25,
+    
+    QUARTERPIPE1 = 26,
+    
+    QUARTERPIPE2 = 27,
+    
+    QUARTERPIPE3 = 28,
+    
+    QUARTERPIPE4 = 29,
+    
+    QUARTERPIPE5 = 30,
+    CURVERAMP = 38,
+    RING4 = 57,
+    BOWL1SOFT = 86,
+    SPIKESOFT = 174,
+    SHRINKDISK = 203,
 }
+
 
 [CustomEditor(typeof(Part)), CanEditMultipleObjects]
 public class GUIEditor : Editor
@@ -42,6 +67,7 @@ public class GUIEditor : Editor
     static int b = 1;
     static Vector3 max = new Vector3(5f,5f,5f);
     static Vector3 spacing = new Vector3(1f,1f,1f);
+    static Vector3 rowOffset = new Vector3(0f,0f,0f);
     static float radius = 2f;
     static float circleSize = 20;
     static float theta_scale = 0.02f;
@@ -71,6 +97,7 @@ public class GUIEditor : Editor
         jitter = EditorGUILayout.Vector3Field("Jitter:", jitter);
         max = EditorGUILayout.Vector3Field("Max grid size:", max); 
         spacing = EditorGUILayout.Vector3Field("Grid spacing:", spacing);
+        rowOffset = EditorGUILayout.Vector3Field("Grid Row offset:", rowOffset);
         var rect = EditorGUILayout.BeginHorizontal();
         Handles.color = Color.gray;
         Handles.DrawLine(new Vector2(rect.x - 15, rect.y), new Vector2(rect.width + 15, rect.y));
@@ -112,8 +139,13 @@ public class GUIEditor : Editor
                 break;
 
                 case OPTIONS.RING:
-                    iterations=17;
-                    rotationOffset.x=20;
+                    iterations=36;
+                    rotationOffset.x=10;
+                break;
+
+                case OPTIONS.ARCH:
+                    iterations=18;
+                    rotationOffset.x=10;
                 break;
 
                 case OPTIONS.HORN:
@@ -122,12 +154,12 @@ public class GUIEditor : Editor
                     rotationOffset.x=-20;
                     scaleOffset=new Vector3(0.9f,0.9f,0.9f);
                 break;
-                case OPTIONS.GRID:
+                case OPTIONS.GRID_FLAT:
                     max = new Vector3(10,1,10);
                     spacing = new Vector3(1,1,1);
                 break;
 
-                case OPTIONS.GRID_SPACED:
+                case OPTIONS.GRID_FLAT_SPACED:
                     max = new Vector3(10,1,10);
                     spacing = new Vector3(1.1f,1.1f,1.1f);
                 break;
@@ -143,7 +175,14 @@ public class GUIEditor : Editor
                     positionOffset=new Vector3(0f,1f,0f);
                 break;
 
-                case OPTIONS.TABLE:
+                case OPTIONS.BRICKS:
+                    iterations = 10;
+                    spacing = new Vector3(1.1f,1.1f,1.1f);
+                    max = new Vector3(10,1,10);
+                    rowOffset = new Vector3(0,0,0.5f);  
+                break;
+
+                case OPTIONS.TABLE_GENERATE:
                     Vector3 pos;
                     newGameObjects = new List<GameObject>();
                     partSelected=PARTS.CUBE;
@@ -179,6 +218,7 @@ public class GUIEditor : Editor
         }
 
         if(GUILayout.Button("Create Part", GUILayout.Width(100), GUILayout.Height(20))){
+            newGameObjects = new List<GameObject>();
             createPart();
         }
 
@@ -195,6 +235,8 @@ public class GUIEditor : Editor
             newGameObjects = new List<GameObject>();
             lastSelected = Selection.activeGameObject;
             GameObject originalGo = Selection.activeGameObject;
+            Vector3 rowOffsetCurrent = new Vector3(0,0,0);
+            int flip = 1;
             for (float x = 0; x < max.x; x = x + 1){
                 for (float y = 0; y < max.y; y = y + 1){
                     for (float z = 0; z < max.z; z = z + 1){
@@ -208,6 +250,8 @@ public class GUIEditor : Editor
                         newPos.y += positionOffset.y;
                         newPos.z += positionOffset.z;
 
+                        newPos += rowOffsetCurrent;
+
                         Vector3 newScale = Selection.activeGameObject.transform.localScale;
                         newScale.x *= scaleOffset.x;
                         newScale.y *= scaleOffset.y;
@@ -219,6 +263,8 @@ public class GUIEditor : Editor
                         saveStateAll(go);
                         newGameObjects.Add(go);
                     }
+                    rowOffsetCurrent += rowOffset * flip;
+                    flip *= -1;
                 }
             }
         }
@@ -247,22 +293,31 @@ public class GUIEditor : Editor
                 go.transform.position = newPos;
                 go.transform.localScale = newScale;
                 newGameObjects.Add(go);
-
             }
         }
 
-        if(GUILayout.Button("Extrude"))
+        if(GUILayout.Button("Generate"))
         {
            newGameObjects = new List<GameObject>();
            lastSelected = Selection.activeGameObject;
+           int flag=0;
         for (int i = 0; i < iterations; i++)
             {
                 GameObject go = CopyObject(Selection.activeGameObject);
                 newGameObjects.Add(go);
-                Vector3 newPosition = go.transform.TransformDirection(Vector3.forward * speed * go.transform.localScale.x);
+                Vector3 newPosition;
+                if (flag==0) {
+                    newPosition = go.transform.TransformDirection(Vector3.forward * 0 * go.transform.localScale.z);
+                } else {
+                   newPosition = go.transform.TransformDirection(Vector3.forward * speed * go.transform.localScale.z); 
+                }
+                flag++;
+                go.transform.Rotate(rotationOffset.x, rotationOffset.y, rotationOffset.z, Space.Self);
+                
                 newPosition += positionOffset;
                 Vector3 variation = new Vector3(UnityEngine.Random.Range(0,jitter.x),UnityEngine.Random.Range(0,jitter.y),UnityEngine.Random.Range(0,jitter.z));
                 newPosition += variation;
+
                 Vector3 newScale = Selection.activeGameObject.transform.localScale;
                 newScale.x *= scaleOffset.x;
                 newScale.y *= scaleOffset.y;
@@ -276,7 +331,7 @@ public class GUIEditor : Editor
                 {break;}
                 go.transform.localPosition += newPosition;
                 go.transform.localScale = newScale;
-                go.transform.Rotate(rotationOffset.x, rotationOffset.y, rotationOffset.z, Space.Self);
+                
                 saveState(go);
                 Selection.activeGameObject = go;
             }
