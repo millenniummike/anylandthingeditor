@@ -14,7 +14,8 @@ public enum OPTIONS
     TOWER = 7,
     STAIRS = 8,
     BRICKS = 9,
-    TABLE_GENERATE = 1000
+    ROOM_GENERATE = 1000,
+    TABLE_GENERATE = 1001
 }
 
 public enum PARTS
@@ -120,99 +121,7 @@ public class GUIEditor : Editor
         op = (OPTIONS)EditorGUILayout.EnumPopup("Setting:", op);
 
         if(GUILayout.Button("Load Setting", GUILayout.Width(100), GUILayout.Height(20))){
-            // set defaults
-                iterations=5;
-                rotationOffset = new Vector3(0,0,0);
-                positionOffset = new Vector3(0,0,0);
-                scaleOffset = new Vector3(1,1,1);
-                jitter = new Vector3(0,0,0);
-                speed = 1;
-            switch (op)
-         {
-                //** todo load from file */
-                case OPTIONS.SPIRAL:
-                    iterations=20;
-                    rotationOffset.y=30;
-                    positionOffset.y=1;
-                break;
-
-                case OPTIONS.RING:
-                    iterations=36;
-                    rotationOffset.x=10;
-                break;
-
-                case OPTIONS.ARCH:
-                    iterations=18;
-                    rotationOffset.x=10;
-                break;
-
-                case OPTIONS.HORN:
-                    iterations=18;
-                    speed=0.8f;
-                    rotationOffset.x=-20;
-                    scaleOffset=new Vector3(0.9f,0.9f,0.9f);
-                break;
-                case OPTIONS.GRID_FLAT:
-                    max = new Vector3(10,1,10);
-                    spacing = new Vector3(1,1,1);
-                break;
-
-                case OPTIONS.GRID_FLAT_SPACED:
-                    max = new Vector3(10,1,10);
-                    spacing = new Vector3(1.1f,1.1f,1.1f);
-                break;
-
-                case OPTIONS.TOWER:
-                    iterations = 10;
-                    speed = 0.8f;
-                    scaleOffset=new Vector3(0.8f,0.8f,0.8f);
-                break;
-
-                case OPTIONS.STAIRS:
-                    iterations = 10;
-                    positionOffset=new Vector3(0f,1f,0f);
-                break;
-
-                case OPTIONS.BRICKS:
-                    iterations = 10;
-                    spacing = new Vector3(1.1f,1.1f,1.1f);
-                    max = new Vector3(10,1,10);
-                    rowOffset = new Vector3(0,0,0.5f);  
-                break;
-
-                case OPTIONS.TABLE_GENERATE:
-                    Vector3 pos;
-                    newGameObjects = new List<GameObject>();
-                    partSelected=PARTS.CUBE;
-                    createPart();
-                    pos = Selection.activeGameObject.transform.position;
-                    Selection.activeGameObject.transform.position=pos;
-                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
-                    createPart();
-                    pos = Selection.activeGameObject.transform.position;
-                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
-                    pos.x+=1;
-                    pos.y+=1;
-                    Selection.activeGameObject.transform.position=pos;
-                    createPart();
-                    pos = Selection.activeGameObject.transform.position;
-                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
-                    pos.x+=1;
-                    Selection.activeGameObject.transform.position=pos;
-                    createPart();
-                    pos = Selection.activeGameObject.transform.position;
-                    Selection.activeGameObject.transform.localScale=new Vector3(0.25f,0.25f,1);
-                    pos.y+=1;
-                    Selection.activeGameObject.transform.position=pos;
-                    createPart();
-                    pos = Selection.activeGameObject.transform.position;
-                    Selection.activeGameObject.transform.localScale=new Vector3(2f,2f,0.1f);
-                    pos.y+=0.5f;
-                    pos.x+=0.5f;
-                    pos.z+=0.5f;
-                    Selection.activeGameObject.transform.position=pos;
-                break;
-            }
+            loadSettings();
         }
 
         if(GUILayout.Button("Create Part", GUILayout.Width(100), GUILayout.Height(20))){
@@ -230,41 +139,7 @@ public class GUIEditor : Editor
 
          GUILayout.BeginHorizontal();
         if(GUILayout.Button("Create Grid", GUILayout.Width(100), GUILayout.Height(20))){
-            newGameObjects = new List<GameObject>();
-            lastSelected = Selection.activeGameObject;
-            GameObject originalGo = Selection.activeGameObject;
-            Vector3 rowOffsetCurrent = new Vector3(0,0,0);
-            int flip = 1;
-            for (float x = 0; x < max.x; x = x + 1){
-                for (float y = 0; y < max.y; y = y + 1){
-                    for (float z = 0; z < max.z; z = z + 1){
-                        GameObject go = CopyObject(Selection.activeGameObject);
-                        Vector3 newPos = originalGo.transform.position;
-                        newPos.x += x * spacing.x;
-                        newPos.y += y * spacing.y;
-                        newPos.z += z * spacing.z;
-
-                        newPos.x += positionOffset.x;
-                        newPos.y += positionOffset.y;
-                        newPos.z += positionOffset.z;
-
-                        newPos += rowOffsetCurrent;
-
-                        Vector3 newScale = Selection.activeGameObject.transform.localScale;
-                        newScale.x *= scaleOffset.x;
-                        newScale.y *= scaleOffset.y;
-                        newScale.z *= scaleOffset.z;
-                        go.transform.Rotate(rotationOffset.x, rotationOffset.y, rotationOffset.z, Space.Self);
-                        go.transform.position = newPos;
-                        go.transform.localScale = newScale;
-                        Selection.activeGameObject = go;
-                        saveStateAll(go);
-                        newGameObjects.Add(go);
-                    }
-                    rowOffsetCurrent += rowOffset * flip;
-                    flip *= -1;
-                }
-            }
+            createGrid();
         }
 
         if(GUILayout.Button("Create Circle", GUILayout.Width(100), GUILayout.Height(20))){
@@ -461,6 +336,142 @@ public class GUIEditor : Editor
         GameObject go = CreateObject(newState,b);
         newGameObjects.Add(go);
         Selection.activeGameObject = go;
+    }
+
+    static void createGrid(){
+        newGameObjects = new List<GameObject>();
+            lastSelected = Selection.activeGameObject;
+            GameObject originalGo = Selection.activeGameObject;
+            Vector3 rowOffsetCurrent = new Vector3(0,0,0);
+            int flip = 1;
+            for (float x = 0; x < max.x; x = x + 1){
+                for (float y = 0; y < max.y; y = y + 1){
+                    for (float z = 0; z < max.z; z = z + 1){
+                        GameObject go = CopyObject(Selection.activeGameObject);
+                        Vector3 newPos = originalGo.transform.position;
+                        newPos.x += x * spacing.x;
+                        newPos.y += y * spacing.y;
+                        newPos.z += z * spacing.z;
+
+                        newPos.x += positionOffset.x;
+                        newPos.y += positionOffset.y;
+                        newPos.z += positionOffset.z;
+
+                        newPos += rowOffsetCurrent;
+
+                        Vector3 newScale = Selection.activeGameObject.transform.localScale;
+                        newScale.x *= scaleOffset.x;
+                        newScale.y *= scaleOffset.y;
+                        newScale.z *= scaleOffset.z;
+                        go.transform.Rotate(rotationOffset.x, rotationOffset.y, rotationOffset.z, Space.Self);
+                        go.transform.position = newPos;
+                        go.transform.localScale = newScale;
+                        Selection.activeGameObject = go;
+                        saveStateAll(go);
+                        newGameObjects.Add(go);
+                    }
+                    rowOffsetCurrent += rowOffset * flip;
+                    flip *= -1;
+                }
+            }
+    }
+    void loadSettings(){
+        // set defaults
+                iterations=5;
+                rotationOffset = new Vector3(0,0,0);
+                positionOffset = new Vector3(0,0,0);
+                scaleOffset = new Vector3(1,1,1);
+                jitter = new Vector3(0,0,0);
+                speed = 1;
+                Vector3 pos;
+            switch (op)
+         {
+                //** todo load from file */
+                case OPTIONS.SPIRAL:
+                    iterations=20;
+                    rotationOffset.y=30;
+                    positionOffset.y=1;
+                break;
+
+                case OPTIONS.RING:
+                    iterations=36;
+                    rotationOffset.x=10;
+                break;
+
+                case OPTIONS.ARCH:
+                    iterations=18;
+                    rotationOffset.x=10;
+                break;
+
+                case OPTIONS.HORN:
+                    iterations=18;
+                    speed=0.8f;
+                    rotationOffset.x=-20;
+                    scaleOffset=new Vector3(0.9f,0.9f,0.9f);
+                break;
+                case OPTIONS.GRID_FLAT:
+                    max = new Vector3(10,1,10);
+                    spacing = new Vector3(1,1,1);
+                break;
+
+                case OPTIONS.GRID_FLAT_SPACED:
+                    max = new Vector3(10,1,10);
+                    spacing = new Vector3(1.1f,1.1f,1.1f);
+                break;
+
+                case OPTIONS.TOWER:
+                    iterations = 10;
+                    speed = 0.8f;
+                    scaleOffset=new Vector3(0.8f,0.8f,0.8f);
+                break;
+
+                case OPTIONS.STAIRS:
+                    iterations = 10;
+                    positionOffset=new Vector3(0f,1f,0f);
+                break;
+
+                case OPTIONS.BRICKS:
+                    iterations = 10;
+                    spacing = new Vector3(1.1f,1.1f,1.1f);
+                    max = new Vector3(10,1,10);
+                    rowOffset = new Vector3(0,0,0.5f);  
+                break;
+
+                case OPTIONS.ROOM_GENERATE:
+                    newGameObjects = new List<GameObject>();
+                    partSelected=PARTS.CUBE;
+                    // grid floor
+                    createPart();
+                    Selection.activeGameObject.transform.localScale=new Vector3(1,0.3f,1);
+                    Selection.activeGameObject.transform.position=new Vector3(-5,0,-5);
+                    op = OPTIONS.GRID_FLAT_SPACED;
+                    loadSettings();
+                    createGrid();
+
+                    // floor
+                    createPart();
+                    Selection.activeGameObject.transform.localScale=new Vector3(10,0.1f,10);
+                    
+                    // ceiling
+                    createPart();
+                    Selection.activeGameObject.transform.localScale=new Vector3(10,0.3f,10);
+                    Selection.activeGameObject.transform.position=new Vector3(0,10,0);
+                    // wall1
+                    createPart();
+                    Selection.activeGameObject.transform.localScale=new Vector3(10,10,0.3f);
+                    Selection.activeGameObject.transform.position=new Vector3(0,5,5);
+                    // wall2
+                    createPart();
+                    Selection.activeGameObject.transform.localScale=new Vector3(10,10,0.3f);
+                    Selection.activeGameObject.transform.position=new Vector3(0,5,-5);
+                    
+
+                break;
+
+                case OPTIONS.TABLE_GENERATE:
+
+                break;
+            }
     }
 }
 
