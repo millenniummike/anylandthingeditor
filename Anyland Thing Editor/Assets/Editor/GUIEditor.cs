@@ -444,6 +444,7 @@ public class GUIEditor : Editor
                     createPart();
                     Selection.activeGameObject.transform.localScale=new Vector3(1,0.3f,1);
                     Selection.activeGameObject.transform.position=new Vector3(-5,0,-5);
+                    saveState(Selection.activeGameObject);
                     op = OPTIONS.GRID_FLAT_SPACED;
                     loadSettings();
                     createGrid();
@@ -456,14 +457,17 @@ public class GUIEditor : Editor
                     createPart();
                     Selection.activeGameObject.transform.localScale=new Vector3(10,0.3f,10);
                     Selection.activeGameObject.transform.position=new Vector3(0,10,0);
+                    saveState(Selection.activeGameObject);
                     // wall1
                     createPart();
                     Selection.activeGameObject.transform.localScale=new Vector3(10,10,0.3f);
                     Selection.activeGameObject.transform.position=new Vector3(0,5,5);
+                    saveState(Selection.activeGameObject);
                     // wall2
                     createPart();
                     Selection.activeGameObject.transform.localScale=new Vector3(10,10,0.3f);
                     Selection.activeGameObject.transform.position=new Vector3(0,5,-5);
+                    saveState(Selection.activeGameObject);
                     
 
                 break;
