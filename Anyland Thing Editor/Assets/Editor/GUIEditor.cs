@@ -83,8 +83,6 @@ public class GUIEditor : Editor
     static List<GameObject> newGameObjects;
 
     static GameObject lastSelected;
-
-    static Setting settings;
     public override void OnInspectorGUI()
     {
         
